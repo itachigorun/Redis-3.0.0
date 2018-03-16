@@ -32,35 +32,71 @@
 #define __ADLIST_H__
 
 /* Node, List, and Iterator are the only data structures used currently. */
-
+/*
+ * 双向链表节点
+ */
 typedef struct listNode {
     struct listNode *prev;
     struct listNode *next;
     void *value;
 } listNode;
 
+/*
+ * 双向链表迭代器
+ */
 typedef struct listIter {
+
+    // 当前迭代到到节点
     listNode *next;
+
+    // 迭代到方向
     int direction;
 } listIter;
 
+/*
+ * 双向链表
+ */
 typedef struct list {
+
+    // 表头节点
     listNode *head;
+
+    // 表尾节点
     listNode *tail;
+
+    // 节点值复制函数
     void *(*dup)(void *ptr);
+
+    // 节点值释放函数
     void (*free)(void *ptr);
+
+    // 节点值比对函数
     int (*match)(void *ptr, void *key);
+
+    // 链表所包含到节点数量
     unsigned long len;
 } list;
 
 /* Functions implemented as macros */
+// 返回给定链表所包含节点数量
+// T = O(1)
 #define listLength(l) ((l)->len)
+// 返回给定链表的头节点
+// T = O(1)
 #define listFirst(l) ((l)->head)
+// 返回链表尾节点
+// T = O(1)
 #define listLast(l) ((l)->tail)
+// 返回给定链表前置节点
+// T = O(1)
 #define listPrevNode(n) ((n)->prev)
+// 返回给定节点后置节点
+// T = O(1)
 #define listNextNode(n) ((n)->next)
+// 返回节点到值
+// T = O(1)
 #define listNodeValue(n) ((n)->value)
-
+//
 #define listSetDupMethod(l,m) ((l)->dup = (m))
 #define listSetFreeMethod(l,m) ((l)->free = (m))
 #define listSetMatchMethod(l,m) ((l)->match = (m))
@@ -87,7 +123,12 @@ void listRewindTail(list *list, listIter *li);
 void listRotate(list *list);
 
 /* Directions for iterators */
+/*
+ * 迭代器进行迭代到方向
+ */
+// 从头节点向尾节点进行迭代
 #define AL_START_HEAD 0
+// 从尾节点向头节点进行迭代
 #define AL_START_TAIL 1
 
 #endif /* __ADLIST_H__ */

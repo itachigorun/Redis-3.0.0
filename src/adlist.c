@@ -38,12 +38,20 @@
  * by the user before to call AlFreeList().
  *
  * On error, NULL is returned. Otherwise the pointer to the new list. */
+/*
+ * 创建新链表
+ *
+ * Parameter: void
+ * Return: 链表指针,失败返回NULL
+ * T = O(1)
+ */
 list *listCreate(void)
 {
     struct list *list;
-
+    // 申请内存
     if ((list = zmalloc(sizeof(*list))) == NULL)
         return NULL;
+    //初始化属性
     list->head = list->tail = NULL;
     list->len = 0;
     list->dup = NULL;
@@ -55,19 +63,28 @@ list *listCreate(void)
 /* Free the whole list.
  *
  * This function can't fail. */
+ /*
+  * 释放链表中到所有节点
+  * Parameter: 链表指针
+  * Return : void
+  */
 void listRelease(list *list)
 {
     unsigned long len;
     listNode *current, *next;
-
+    // 指向头节点
     current = list->head;
+    // 遍历整个链表
     len = list->len;
     while(len--) {
         next = current->next;
+        // 如果有free函数，释放当前节点的值
         if (list->free) list->free(current->value);
+        // 释放节点
         zfree(current);
         current = next;
     }
+    //
     zfree(list);
 }
 

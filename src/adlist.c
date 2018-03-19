@@ -44,14 +44,17 @@
  * Parameter: void
  * Return: 链表指针,失败返回NULL
  * T = O(1)
+ * S = O(1)
  */
 list *listCreate(void)
 {
     struct list *list;
-    // 申请内存
+
+   // 申请内存
     if ((list = zmalloc(sizeof(*list))) == NULL)
         return NULL;
-    //初始化属性
+
+   //初始化属性
     list->head = list->tail = NULL;
     list->len = 0;
     list->dup = NULL;
@@ -67,24 +70,31 @@ list *listCreate(void)
   * 释放链表中到所有节点
   * Parameter: 链表指针
   * Return : void
+  * T = O(n)
+  * S = O(1)
   */
 void listRelease(list *list)
 {
     unsigned long len;
     listNode *current, *next;
+
     // 指向头节点
     current = list->head;
+
     // 遍历整个链表
     len = list->len;
     while(len--) {
         next = current->next;
+
         // 如果有free函数，释放当前节点的值
         if (list->free) list->free(current->value);
-        // 释放节点
+
+        // 释放节点结构
         zfree(current);
         current = next;
     }
-    //
+
+    // 释放链表结构
     zfree(list);
 }
 
@@ -94,22 +104,35 @@ void listRelease(list *list)
  * On error, NULL is returned and no operation is performed (i.e. the
  * list remains unaltered).
  * On success the 'list' pointer you pass to the function is returned. */
+ /*
+  * 头插法插入节点
+  * 返回链表，失败返回NULL
+  * parameter: 链表，值
+  * T = O(1)
+  * S = O(1)
+  */
 list *listAddNodeHead(list *list, void *value)
 {
     listNode *node;
 
+    // 分配内存
     if ((node = zmalloc(sizeof(*node))) == NULL)
         return NULL;
     node->value = value;
+
+    // 链表为空时
     if (list->len == 0) {
         list->head = list->tail = node;
         node->prev = node->next = NULL;
+    // 链表不为空时
     } else {
         node->prev = NULL;
         node->next = list->head;
         list->head->prev = node;
         list->head = node;
     }
+
+    // 链表节点数加一
     list->len++;
     return list;
 }
@@ -120,51 +143,83 @@ list *listAddNodeHead(list *list, void *value)
  * On error, NULL is returned and no operation is performed (i.e. the
  * list remains unaltered).
  * On success the 'list' pointer you pass to the function is returned. */
+ /*
+  * 尾插法添加链表节点
+  * 返回链表，失败返回NULL
+  * parameter: 链表，值
+  * T = O(1)
+  * S = O(1)
+  */
 list *listAddNodeTail(list *list, void *value)
 {
     listNode *node;
 
+    // 分配内存
     if ((node = zmalloc(sizeof(*node))) == NULL)
         return NULL;
     node->value = value;
+
+    // 链表为空时
     if (list->len == 0) {
         list->head = list->tail = node;
         node->prev = node->next = NULL;
+    // 链表不为空时
     } else {
         node->prev = list->tail;
         node->next = NULL;
         list->tail->next = node;
         list->tail = node;
     }
+
+    // 链表数加一
     list->len++;
     return list;
 }
 
+/*
+ * 创建一个新节点，after==1时，插入到old_node之后，
+ *                 after==0时，插入到old_node之前
+ * parameter： 链表，给定节点，值，标志值
+ * T = O(1)
+ * S = O(1)
+ *
+ */
 list *listInsertNode(list *list, listNode *old_node, void *value, int after) {
     listNode *node;
 
+    // 创建新节点
     if ((node = zmalloc(sizeof(*node))) == NULL)
         return NULL;
     node->value = value;
+
+    // after==1，在给定节点后添加新节点
     if (after) {
         node->prev = old_node;
         node->next = old_node->next;
+        // 给定节点是尾节点时
         if (list->tail == old_node) {
             list->tail = node;
         }
+    // after==0, 在给定节点前添加新节点
     } else {
         node->next = old_node;
         node->prev = old_node->prev;
+        // 给定节点是头节点时
         if (list->head == old_node) {
             list->head = node;
         }
     }
+
+    // 更新新节点到前置节点
     if (node->prev != NULL) {
         node->prev->next = node;
     }
+    // 更新新节点到后置节点
     if (node->next != NULL) {
         node->next->prev = node;
     }
+
+    // 链表数加一
     list->len++;
     return list;
 }
@@ -173,18 +228,34 @@ list *listInsertNode(list *list, listNode *old_node, void *value, int after) {
  * It's up to the caller to free the private value of the node.
  *
  * This function can't fail. */
+ /*
+  * 从链表中删除给定节点
+  * 返回void
+  * parameter: 链表，待删除节点
+  * T = O(1)
+  * S = O(1)
+  */
 void listDelNode(list *list, listNode *node)
 {
+    // 调整前置节点指针
     if (node->prev)
         node->prev->next = node->next;
     else
         list->head = node->next;
+
+    // 调整后置节点指针
     if (node->next)
         node->next->prev = node->prev;
     else
         list->tail = node->prev;
+
+    // 释放节点值
     if (list->free) list->free(node->value);
+
+    // 释放节点
     zfree(node);
+
+    // 链表数减一
     list->len--;
 }
 

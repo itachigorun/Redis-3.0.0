@@ -263,30 +263,58 @@ void listDelNode(list *list, listNode *node)
  * call to listNext() will return the next element of the list.
  *
  * This function can't fail. */
+ /*
+  * 初始化链表迭代器，之后每次调用listnext()都会返回当前指向链表节点，
+  * 并将迭代器指向下一个节点或前一节点
+  * parameter:
+  *           AL_START_HEAD:从表头向表尾迭代
+  *           AL_START_TAIL:从表尾向表头迭代
+  * T = O(1)
+  * S = O(1)
+  */
 listIter *listGetIterator(list *list, int direction)
 {
     listIter *iter;
 
     if ((iter = zmalloc(sizeof(*iter))) == NULL) return NULL;
+
+    // 从头节点开始迭代
     if (direction == AL_START_HEAD)
         iter->next = list->head;
     else
         iter->next = list->tail;
+
+    // 记录迭代方向
     iter->direction = direction;
     return iter;
 }
 
 /* Release the iterator memory */
+/*
+ * 释放链表迭代器具
+ * T = O(1)
+ * S = O(1)
+ */
 void listReleaseIterator(listIter *iter) {
     zfree(iter);
 }
 
 /* Create an iterator in the list private iterator structure */
+/*
+ * 将迭代器重置为指向表头，并从表头往下迭代
+ * T = O(1)
+ * S = O(1)
+ */
 void listRewind(list *list, listIter *li) {
     li->next = list->head;
     li->direction = AL_START_HEAD;
 }
 
+/*
+ * 将迭代器重置为指向表尾，并从表尾往上迭代
+ * T = O(1)
+ * S = O(1)
+ */
 void listRewindTail(list *list, listIter *li) {
     li->next = list->tail;
     li->direction = AL_START_TAIL;
@@ -306,10 +334,16 @@ void listRewindTail(list *list, listIter *li) {
  * }
  *
  * */
+ /*
+  * 返回迭代器当前指向节点，并将迭代器指向下一节点,可删除当前节点
+  * T = O(1)
+  * S = O(1)
+  */
 listNode *listNext(listIter *iter)
 {
     listNode *current = iter->next;
 
+    // 迭代器所指节点不为空，则根据方向，对应指向下一节点或前一节点
     if (current != NULL) {
         if (iter->direction == AL_START_HEAD)
             iter->next = current->next;
@@ -327,21 +361,36 @@ listNode *listNext(listIter *iter)
  * the original node is used as value of the copied node.
  *
  * The original list both on success or error is never modified. */
+ /*
+  * 复制链表，成功返回orig到复制，因内存分配失败，返回NULL
+  * 如果链表有设置复制函数dup，则用dup复制节点数据，否则，新链表节点指向原链表节点数据
+  * 输入链表不会改变
+  * T = O(N)
+  * S = O(N)
+  */
 list *listDup(list *orig)
 {
     list *copy;
     listIter *iter;
     listNode *node;
 
+    // 创建新链表
     if ((copy = listCreate()) == NULL)
         return NULL;
+
+    // 复制链表处理函数
     copy->dup = orig->dup;
     copy->free = orig->free;
     copy->match = orig->match;
+
+    // 创建迭代器
     iter = listGetIterator(orig, AL_START_HEAD);
+
+    // 开始迭代
     while((node = listNext(iter)) != NULL) {
         void *value;
 
+        // 复制节点数据
         if (copy->dup) {
             value = copy->dup(node->value);
             if (value == NULL) {
@@ -351,13 +400,19 @@ list *listDup(list *orig)
             }
         } else
             value = node->value;
+
+        // 尾插法插入数据
         if (listAddNodeTail(copy, value) == NULL) {
             listRelease(copy);
             listReleaseIterator(iter);
             return NULL;
         }
     }
+
+    // 释放迭代器
     listReleaseIterator(iter);
+
+    // 返回新建链表
     return copy;
 }
 
@@ -370,15 +425,25 @@ list *listDup(list *orig)
  * On success the first matching node pointer is returned
  * (search starts from head). If no matching node exists
  * NULL is returned. */
+ /*
+  * 从表头开始遍历，寻找和key相等的节点
+  * 比较函数由match函数比较，或直接比较
+  * 成功返回第一个与key值相等的节点，或返回NULL
+  * T = O(N)
+  * S = O(1)
+  */
 listNode *listSearchKey(list *list, void *key)
 {
     listIter *iter;
     listNode *node;
 
+    // 创建迭代器，从表头开始查找
     iter = listGetIterator(list, AL_START_HEAD);
     while((node = listNext(iter)) != NULL) {
         if (list->match) {
             if (list->match(node->value, key)) {
+
+               // 如果找到节点，释放迭代器，并返回节点指针
                 listReleaseIterator(iter);
                 return node;
             }
@@ -389,6 +454,8 @@ listNode *listSearchKey(list *list, void *key)
             }
         }
     }
+
+    // 没有找到节点，释放迭代器，返回NULL
     listReleaseIterator(iter);
     return NULL;
 }
@@ -398,12 +465,22 @@ listNode *listSearchKey(list *list, void *key)
  * and so on. Negative integers are used in order to count
  * from the tail, -1 is the last element, -2 the penultimate
  * and so on. If the index is out of range NULL is returned. */
+ /*
+  * 返回链表在给定下表上到值（索引）
+  * 索引从0开始，也可以时负数，-1表示最后一个节点
+  * 成功返回节点指针，否则返回NULL
+  * T = O(N)
+  * S = O(1)
+  */
 listNode *listIndex(list *list, long index) {
     listNode *n;
 
+    // 索引为负数，从表尾开始查找
     if (index < 0) {
         index = (-index)-1;
         n = list->tail;
+
+        // 表尾往前，索引先为0或者节点指向NULL退出循环
         while(index-- && n) n = n->prev;
     } else {
         n = list->head;
@@ -413,15 +490,23 @@ listNode *listIndex(list *list, long index) {
 }
 
 /* Rotate the list removing the tail node and inserting it to the head. */
+/*
+ * 取出链表到表尾节点，将它移动到表头，成为新到表头节点
+ * T = O(1)
+ * S = O(1)
+ */
 void listRotate(list *list) {
     listNode *tail = list->tail;
 
     if (listLength(list) <= 1) return;
 
     /* Detach current tail */
+    // 重置表尾节点
     list->tail = tail->prev;
     list->tail->next = NULL;
+
     /* Move it as head */
+    // 插入到表头成为新表头节点
     list->head->prev = tail;
     tail->prev = NULL;
     tail->next = list->head;

@@ -39,13 +39,13 @@
 typedef char *sds;
 
 struct sdshdr {
-    // buf中字节长度
+    // buf数组中已用字节长度
     unsigned int len;
 
-    // buf中剩余字节长度
+    // buf数组中剩余字节长度
     unsigned int free;
 
-    // 数据空间
+    // 数组空间
     char buf[];
 };
 

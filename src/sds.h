@@ -39,16 +39,24 @@
 typedef char *sds;
 
 struct sdshdr {
+    // buf数组中已用字节长度
     unsigned int len;
+
+    // buf数组中剩余字节长度
     unsigned int free;
+
+    // 数组空间
     char buf[];
 };
 
+// 获取字符数组当前长度
 static inline size_t sdslen(const sds s) {
+    // sizeof(struct sdshdr)长度为8
     struct sdshdr *sh = (void*)(s-(sizeof(struct sdshdr)));
     return sh->len;
 }
 
+// 获取字符数组可用长度
 static inline size_t sdsavail(const sds s) {
     struct sdshdr *sh = (void*)(s-(sizeof(struct sdshdr)));
     return sh->free;
